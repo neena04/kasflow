@@ -470,7 +470,9 @@ export default function FinanceHub(){
   // Revenue = only transactions in categories containing "Revenue"
   const totalIn=transactions.filter(t=>t.category.toLowerCase().includes("revenue")).reduce((s,t)=>s+Math.abs(t.amount),0);
   const totalOut=transactions.filter(t=>t.type==="out").reduce((s,t)=>s+Math.abs(t.amount),0);
-  const netCash=totalIn-totalOut;
+  // Net cash = all money in minus all money out (liquidity, not P&L)
+  const allIn=transactions.filter(t=>t.type==="in").reduce((s,t)=>s+Math.abs(t.amount),0);
+  const netCash=allIn-totalOut;
   const sourceMap=Object.fromEntries(sources.map(s=>[s.name,s]));
   const bySource=sources.filter(s=>s.name!=="Manual").map(s=>({...s,
     in:transactions.filter(t=>t.source===s.name&&t.type==="in").reduce((sum,t)=>sum+Math.abs(t.amount),0),
@@ -678,7 +680,7 @@ export default function FinanceHub(){
                   <tr key={t.id} className={`tr-row${selected.has(t.id)?" sel":""}`} style={{borderBottom:"1px solid #e8e4dc",background:selected.has(t.id)?"#f0ede6":idx%2===0?"transparent":"#f5f2ed"}}>
                     <td style={{padding:"10px 10px"}}><input type="checkbox" className="chk" checked={selected.has(t.id)} onChange={()=>toggleSelect(t.id)}/></td>
                     <td style={{padding:"10px 10px",fontSize:13,color:"#666",whiteSpace:"nowrap"}}>{t.date}</td>
-                    <td style={{padding:"10px 10px",fontSize:15,maxWidth:240,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.description}</td>
+                    <td style={{padding:"10px 10px",fontSize:15,maxWidth:360,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",cursor:"default"}} title={t.description}>{t.description}</td>
                     <td style={{padding:"10px 10px"}}><span className="src-tag" style={{color:sourceMap[t.source]?.color||"#555",borderColor:sourceMap[t.source]?.color||"#ccc"}}>{t.source}</span></td>
                     <td style={{padding:"10px 10px"}}>
                       <select value={t.category} onChange={e=>updateCategoryDB(t.id,e.target.value)} style={{...selectStyle,fontSize:13,width:"auto",padding:"2px 4px",color:"#555"}}>
@@ -891,4 +893,3 @@ export default function FinanceHub(){
     </div>
   );
 }
-
