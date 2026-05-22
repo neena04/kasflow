@@ -467,7 +467,8 @@ export default function FinanceHub(){
     return true;
   });
   const filteredIds=filtered.map(t=>t.id);
-  const totalIn=transactions.filter(t=>t.type==="in").reduce((s,t)=>s+Math.abs(t.amount),0);
+  // Revenue = only transactions in categories containing "Revenue"
+  const totalIn=transactions.filter(t=>t.category.toLowerCase().includes("revenue")).reduce((s,t)=>s+Math.abs(t.amount),0);
   const totalOut=transactions.filter(t=>t.type==="out").reduce((s,t)=>s+Math.abs(t.amount),0);
   const netCash=totalIn-totalOut;
   const sourceMap=Object.fromEntries(sources.map(s=>[s.name,s]));
@@ -558,7 +559,7 @@ export default function FinanceHub(){
           <div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1px 1fr 1px 1fr 1px 1fr",borderTop:"2px solid #1a1a1a",borderBottom:"1px solid #1a1a1a",padding:"18px 0",marginBottom:28}}>
               {[
-                {label:"Total Revenue",value:fmt(totalIn),sub:`${transactions.filter(t=>t.type==="in").length} receipts`,pos:true},
+                {label:"Total Revenue",value:fmt(totalIn),sub:`${transactions.filter(t=>t.category.toLowerCase().includes("revenue")).length} entries`,pos:true},
                 null,
                 {label:"Total Expenditure",value:fmt(totalOut),sub:`${transactions.filter(t=>t.type==="out").length} payments`,pos:false},
                 null,
@@ -890,3 +891,4 @@ export default function FinanceHub(){
     </div>
   );
 }
+
