@@ -2,60 +2,15 @@ import { useState, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { createClient } from "@supabase/supabase-js";
 
-// ── Password Gate ─────────────────────────────────────────────────────────────
-const APP_PASSWORD = "MabocAlways2026!";
-
-function PasswordGate({onUnlock}) {
-  const [input,setInput]=useState("");
-  const [error,setError]=useState(false);
-  const [shake,setShake]=useState(false);
-  const submit=()=>{
-    if(input===APP_PASSWORD){onUnlock();}
-    else{setError(true);setShake(true);setInput("");setTimeout(()=>setShake(false),600);}
-  };
-  return (
-    <div style={{fontFamily:"'EB Garamond',Georgia,serif",background:"#faf8f4",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=UnifrakturMaguntia&display=swap');
-        *{box-sizing:border-box;margin:0;padding:0;}
-        @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
-        .shake{animation:shake 0.5s ease;}
-      `}</style>
-      <div style={{textAlign:"center",marginBottom:40}}>
-        <div style={{fontFamily:"'UnifrakturMaguntia',cursive",fontSize:52,lineHeight:1,color:"#1a1a1a",marginBottom:8}}>The Finance Ledger</div>
-        <div style={{fontSize:11,letterSpacing:"0.18em",textTransform:"uppercase",color:"#aaa"}}>Restricted Access</div>
-      </div>
-      <div style={{borderTop:"2px solid #1a1a1a",borderBottom:"1px solid #1a1a1a",padding:"32px 48px",width:340,textAlign:"center"}} className={shake?"shake":""}>
-        <div style={{fontSize:11,letterSpacing:"0.14em",textTransform:"uppercase",color:"#777",marginBottom:20}}>Enter Password to Continue</div>
-        <input
-          type="password"
-          value={input}
-          onChange={e=>{setInput(e.target.value);setError(false);}}
-          onKeyDown={e=>e.key==="Enter"&&submit()}
-          placeholder="········"
-          autoFocus
-          style={{width:"100%",fontFamily:"'EB Garamond',Georgia,serif",background:"#faf8f4",border:"none",borderBottom:`1px solid ${error?"#4a1a1a":"#1a1a1a"}`,padding:"10px 4px",fontSize:18,outline:"none",textAlign:"center",letterSpacing:"0.2em",color:error?"#4a1a1a":"#1a1a1a",marginBottom:8}}
-        />
-        {error&&<div style={{fontSize:12,color:"#4a1a1a",fontStyle:"italic",marginBottom:12}}>Incorrect password. Try again.</div>}
-        {!error&&<div style={{marginBottom:12}}/>}
-        <button onClick={submit}
-          style={{width:"100%",fontFamily:"'EB Garamond',Georgia,serif",background:"#1a1a1a",color:"#faf8f4",border:"none",padding:"12px",fontSize:13,letterSpacing:"0.1em",textTransform:"uppercase",cursor:"pointer"}}>
-          Enter
-        </button>
-      </div>
-      <div style={{marginTop:32,fontSize:11,color:"#ccc",letterSpacing:"0.1em",textTransform:"uppercase"}}>
-        The Finance Ledger &nbsp;·&nbsp; Phase I
-      </div>
-    </div>
-  );
-}
-
 // ── Supabase ──────────────────────────────────────────────────────────────────
 const SUPABASE_URL = "https://mbsgydpeyhlnaiodvdaj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ic2d5ZHBleWxobmFpb2R2ZGFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0MTk1NjEsImV4cCI6MjA5NDk5NTU2MX0.ocqwqozFFbmp9DAVbSezKVQBmcYjMPPjb0dkaq8BPlY";
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ── Defaults (used only if DB is empty) ───────────────────────────────────────
+// ── Password ──────────────────────────────────────────────────────────────────
+const APP_PASSWORD = "MabocAlways2026!";
+
+// ── Defaults ──────────────────────────────────────────────────────────────────
 const DEFAULT_CATEGORIES = [
   "IPL Collection","Cleaning Supplies","Supplier Payment","E-commerce Purchase",
   "Salary & Payroll","Utility & Overhead","Customer Refund","Software & Subscriptions",
@@ -78,21 +33,21 @@ const fmt = (n) => new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR
 const todayStr = () => new Date().toLocaleDateString("en-US",{weekday:"long",year:"numeric",month:"long",day:"numeric"}).toUpperCase();
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const parseCSVDate = (str) => {
-  if (!str) return "";
-  if (typeof str==="number") { const d=XLSX.SSF.parse_date_code(str); if(d) return `${d.y}-${String(d.m).padStart(2,"0")}-${String(d.d).padStart(2,"0")}`; }
+const parseCSVDate=(str)=>{
+  if(!str) return "";
+  if(typeof str==="number"){const d=XLSX.SSF.parse_date_code(str);if(d)return `${d.y}-${String(d.m).padStart(2,"0")}-${String(d.d).padStart(2,"0")}`;}
   const s=String(str).trim();
-  const d=new Date(s); if(!isNaN(d)&&s.length>=8) return d.toISOString().split("T")[0];
+  const d=new Date(s);if(!isNaN(d)&&s.length>=8)return d.toISOString().split("T")[0];
   const parts=s.split(/[\/\-\.]/);
   if(parts.length===3){
-    if(parts[2].length===4) return `${parts[2]}-${parts[1].padStart(2,"0")}-${parts[0].padStart(2,"0")}`;
-    if(parts[0].length===4) return `${parts[0]}-${parts[1].padStart(2,"0")}-${parts[2].padStart(2,"0")}`;
+    if(parts[2].length===4)return `${parts[2]}-${parts[1].padStart(2,"0")}-${parts[0].padStart(2,"0")}`;
+    if(parts[0].length===4)return `${parts[0]}-${parts[1].padStart(2,"0")}-${parts[2].padStart(2,"0")}`;
   }
   return "";
 };
 const parseAmount=(str)=>{
-  if(str===null||str===undefined||str==="") return 0;
-  if(typeof str==="number") return str;
+  if(str===null||str===undefined||str==="")return 0;
+  if(typeof str==="number")return str;
   return parseFloat(String(str).replace(/[^0-9,.\-]/g,"").replace(/\./g,"").replace(",","."))||0;
 };
 
@@ -102,7 +57,7 @@ const loadPdfJs=()=>new Promise((resolve,reject)=>{
   const s=document.createElement("script");
   s.src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
   s.onload=()=>{window.pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";resolve(window.pdfjsLib);};
-  s.onerror=reject; document.head.appendChild(s);
+  s.onerror=reject;document.head.appendChild(s);
 });
 const extractPDFText=async(arrayBuffer)=>{
   const lib=await loadPdfJs();
@@ -117,72 +72,68 @@ const extractPDFText=async(arrayBuffer)=>{
   return text;
 };
 const resolveDate=(ddmmm)=>{
-  const parts=ddmmm.split(/[-\/]/); if(parts.length<2) return "";
-  const day=parts[0].padStart(2,"0"); const mon=MONTH_ID[parts[1].toUpperCase()]; if(!mon) return "";
-  const now=new Date(); const year=mon>now.getMonth()+2?now.getFullYear()-1:now.getFullYear();
+  const parts=ddmmm.split(/[-\/]/);if(parts.length<2)return "";
+  const day=parts[0].padStart(2,"0");const mon=MONTH_ID[parts[1].toUpperCase()];if(!mon)return "";
+  const now=new Date();const year=mon>now.getMonth()+2?now.getFullYear()-1:now.getFullYear();
   return `${year}-${String(mon).padStart(2,"0")}-${day}`;
 };
 const parseBCACreditCardPDF=(text,source)=>{
-  const rows=[]; const singleRe=/^(\d{2}[-\/]([A-Z]{3}))\s+(\d{2}[-\/][A-Z]{3})\s+(.+?)\s+([\d.,]+)\s*(CR)?$/i;
+  const rows=[];const singleRe=/^(\d{2}[-\/]([A-Z]{3}))\s+(\d{2}[-\/][A-Z]{3})\s+(.+?)\s+([\d.,]+)\s*(CR)?$/i;
   for(const line of text.split("\n")){
-    const m=line.trim().match(singleRe); if(!m) continue;
-    const date=resolveDate(m[1]); if(!date) continue;
+    const m=line.trim().match(singleRe);if(!m)continue;
+    const date=resolveDate(m[1]);if(!date)continue;
     const desc=m[4].trim();
-    if(/subtotal|total|saldo|tagihan|kredit limit|batas|tunggakan|meterai lunas/i.test(desc)) continue;
-    const amount=parseAmount(m[5]); if(amount===0) continue;
+    if(/subtotal|total|saldo|tagihan|kredit limit|batas|tunggakan|meterai lunas/i.test(desc))continue;
+    const amount=parseAmount(m[5]);if(amount===0)continue;
     const isCredit=!!(m[6]&&m[6].toUpperCase()==="CR");
     rows.push({id:crypto.randomUUID(),date,description:desc,amount:isCredit?amount:-amount,type:isCredit?"in":"out",source,category:"Uncategorized"});
   }
   return rows;
 };
 const parseGenericPDF=(text,source)=>{
-  const rows=[]; const lineRe=/(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{2}[-\/][A-Z]{3}[-\/]?\d{0,4})\s+(.{3,60}?)\s+([\d.,]{3,})\s*(CR|DB|K|D)?/i;
+  const rows=[];const lineRe=/(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{2}[-\/][A-Z]{3}[-\/]?\d{0,4})\s+(.{3,60}?)\s+([\d.,]{3,})\s*(CR|DB|K|D)?/i;
   for(const line of text.split("\n")){
-    const m=line.trim().match(lineRe); if(!m) continue;
-    const date=parseCSVDate(m[1])||""; if(!date) continue;
-    const desc=m[2].trim(); if(desc.length<2) continue;
-    const amount=parseAmount(m[3]); if(amount===0) continue;
-    const tag=(m[4]||"").toUpperCase(); const isCredit=tag==="CR"||tag==="K";
+    const m=line.trim().match(lineRe);if(!m)continue;
+    const date=parseCSVDate(m[1])||"";if(!date)continue;
+    const desc=m[2].trim();if(desc.length<2)continue;
+    const amount=parseAmount(m[3]);if(amount===0)continue;
+    const tag=(m[4]||"").toUpperCase();const isCredit=tag==="CR"||tag==="K";
     rows.push({id:crypto.randomUUID(),date,description:desc,amount:isCredit?amount:-amount,type:isCredit?"in":"out",source,category:"Uncategorized"});
   }
   return rows;
 };
 const parsePDFBuffer=async(arrayBuffer,source)=>{
   const text=await extractPDFText(arrayBuffer);
-  if(/REKENING KARTU KREDIT|KARTU KREDIT BCA/i.test(text)) return parseBCACreditCardPDF(text,source);
+  if(/REKENING KARTU KREDIT|KARTU KREDIT BCA/i.test(text))return parseBCACreditCardPDF(text,source);
   return parseGenericPDF(text,source);
 };
-
-// ── CSV / XLSX ────────────────────────────────────────────────────────────────
-const parseBCACSV=(text,source)=>{
-  return text.trim().split("\n").filter(l=>l.trim()).flatMap(line=>{
-    const cols=line.split(",").map(c=>c.replace(/^"|"$/g,"").trim());
-    if(cols.length<4) return [];
-    const dateStr=parseCSVDate(cols[0]); if(!dateStr) return [];
-    const desc=cols[1]||cols[2]||"";
-    let debit=0,credit=0;
-    if(cols.length>=5){debit=parseAmount(cols[2]);credit=parseAmount(cols[3]);}
-    else if(cols.length===4){const amt=parseAmount(cols[2]);const t=(cols[3]||"").toLowerCase();if(t.includes("db")||t.includes("debit"))debit=amt;else credit=amt;}
-    if(debit===0&&credit===0) return [];
-    return [{id:crypto.randomUUID(),date:dateStr,description:desc,amount:credit>0?credit:-debit,type:credit>0?"in":"out",source,category:"Uncategorized"}];
-  });
-};
+const parseBCACSV=(text,source)=>text.trim().split("\n").filter(l=>l.trim()).flatMap(line=>{
+  const cols=line.split(",").map(c=>c.replace(/^"|"$/g,"").trim());
+  if(cols.length<4)return [];
+  const dateStr=parseCSVDate(cols[0]);if(!dateStr)return [];
+  const desc=cols[1]||cols[2]||"";
+  let debit=0,credit=0;
+  if(cols.length>=5){debit=parseAmount(cols[2]);credit=parseAmount(cols[3]);}
+  else if(cols.length===4){const amt=parseAmount(cols[2]);const t=(cols[3]||"").toLowerCase();if(t.includes("db")||t.includes("debit"))debit=amt;else credit=amt;}
+  if(debit===0&&credit===0)return [];
+  return [{id:crypto.randomUUID(),date:dateStr,description:desc,amount:credit>0?credit:-debit,type:credit>0?"in":"out",source,category:"Uncategorized"}];
+});
 const parseGenericCSV=(text,source)=>{
-  const lines=text.trim().split("\n").filter(l=>l.trim()); if(lines.length<2) return [];
+  const lines=text.trim().split("\n").filter(l=>l.trim());if(lines.length<2)return [];
   const headers=lines[0].split(",").map(h=>h.replace(/^"|"$/g,"").trim().toLowerCase());
   return lines.slice(1).flatMap(line=>{
     const cols=line.split(",").map(c=>c.replace(/^"|"$/g,"").trim());
-    const obj={}; headers.forEach((h,i)=>{obj[h]=cols[i]||"";});
+    const obj={};headers.forEach((h,i)=>{obj[h]=cols[i]||"";});
     const dateKey=headers.find(h=>h.includes("date")||h.includes("tanggal")||h.includes("tgl"));
     const descKey=headers.find(h=>h.includes("desc")||h.includes("keterangan")||h.includes("narasi")||h.includes("ket"));
     const amtKey=headers.find(h=>h.includes("amount")||h.includes("jumlah")||h.includes("mutasi")||h.includes("nominal"));
     const debitKey=headers.find(h=>h.includes("debit")||h==="db");
     const creditKey=headers.find(h=>h.includes("credit")||h.includes("kredit")||h==="cr");
-    const date=parseCSVDate(obj[dateKey]||""); if(!date) return [];
+    const date=parseCSVDate(obj[dateKey]||"");if(!date)return [];
     let amount=0;
     if(debitKey&&creditKey){const dv=parseAmount(obj[debitKey]);const cv=parseAmount(obj[creditKey]);amount=cv>0?cv:-dv;}
     else if(amtKey){amount=parseAmount(obj[amtKey]);}
-    if(amount===0) return [];
+    if(amount===0)return [];
     return [{id:crypto.randomUUID(),date,description:obj[descKey]||"",amount,type:amount>=0?"in":"out",source,category:"Uncategorized"}];
   });
 };
@@ -191,7 +142,7 @@ const parseXLSXBuffer=(buffer,source)=>{
   const wb=XLSX.read(buffer,{type:"array",cellDates:true});
   const sheet=wb.Sheets[wb.SheetNames[0]];
   const rows=XLSX.utils.sheet_to_json(sheet,{header:1,raw:false,dateNF:"YYYY-MM-DD"});
-  if(rows.length<2) return [];
+  if(rows.length<2)return [];
   let headerIdx=0;
   for(let i=0;i<Math.min(10,rows.length);i++){if(rows[i].filter(Boolean).length>=3){headerIdx=i;break;}}
   const headers=rows[headerIdx].map(h=>String(h||"").trim().toLowerCase());
@@ -201,34 +152,30 @@ const parseXLSXBuffer=(buffer,source)=>{
   const debitKey=headers.findIndex(h=>h.includes("debit")||h==="db");
   const creditKey=headers.findIndex(h=>h.includes("credit")||h.includes("kredit")||h==="cr");
   return rows.slice(headerIdx+1).flatMap(row=>{
-    if(!row||row.filter(Boolean).length<2) return [];
-    const date=parseCSVDate(dateKey>=0?row[dateKey]:row[0]); if(!date) return [];
+    if(!row||row.filter(Boolean).length<2)return [];
+    const date=parseCSVDate(dateKey>=0?row[dateKey]:row[0]);if(!date)return [];
     const desc=String(descKey>=0?(row[descKey]||""):(row[1]||"")).trim();
     let amount=0;
     if(debitKey>=0&&creditKey>=0){const dv=parseAmount(row[debitKey]);const cv=parseAmount(row[creditKey]);amount=cv>0?cv:-dv;}
     else if(amtKey>=0){amount=parseAmount(row[amtKey]);}
     else{for(let i=1;i<row.length;i++){const v=parseAmount(row[i]);if(v!==0){amount=v;break;}}}
-    if(amount===0) return [];
+    if(amount===0)return [];
     return [{id:crypto.randomUUID(),date,description:desc,amount,type:amount>=0?"in":"out",source,category:"Uncategorized"}];
   });
 };
-
-// ── Auto-category ─────────────────────────────────────────────────────────────
 const makeAutoCategory=(categories)=>(desc,type)=>{
   const d=desc.toLowerCase();
-  if(d.includes("ipl")||d.includes("pengelolaan")) return categories.includes("IPL Collection")?"IPL Collection":"Uncategorized";
-  if(d.includes("cleaning")||d.includes("sabun")||d.includes("deterjen")) return categories.includes("Cleaning Supplies")?"Cleaning Supplies":"Uncategorized";
-  if(d.includes("gaji")||d.includes("salary")||d.includes("payroll")) return categories.includes("Salary & Payroll")?"Salary & Payroll":"Uncategorized";
-  if(d.includes("listrik")||d.includes("pln")||d.includes("pdam")||d.includes("telkom")) return categories.includes("Utility & Overhead")?"Utility & Overhead":"Uncategorized";
-  if(d.includes("shopee")||d.includes("tokopedia")||d.includes("lazada")) return categories.includes("E-commerce Purchase")?"E-commerce Purchase":"Uncategorized";
-  if(d.includes("refund")||d.includes("pengembalian")||d.includes("pembayaran")) return type==="in"?(categories.includes("Customer Refund")?"Customer Refund":"Other Income"):"Uncategorized";
-  if(d.includes("supplier")||d.includes("vendor")) return categories.includes("Supplier Payment")?"Supplier Payment":"Uncategorized";
-  if(d.includes("claude")||d.includes("openai")||d.includes("chatgpt")||d.includes("google one")||d.includes("google workspace")||d.includes("digitalocean")||d.includes("mailgun")||d.includes("managewp")||d.includes("kommo")||d.includes("apple")||d.includes("playstation")) return categories.includes("Software & Subscriptions")?"Software & Subscriptions":"Uncategorized";
-  if(d.includes("bunga")||d.includes("biaya")||d.includes("meterai")||d.includes("keterlambatan")) return categories.includes("Utility & Overhead")?"Utility & Overhead":"Uncategorized";
+  if(d.includes("ipl")||d.includes("pengelolaan"))return categories.includes("IPL Collection")?"IPL Collection":"Uncategorized";
+  if(d.includes("cleaning")||d.includes("sabun")||d.includes("deterjen"))return categories.includes("Cleaning Supplies")?"Cleaning Supplies":"Uncategorized";
+  if(d.includes("gaji")||d.includes("salary")||d.includes("payroll"))return categories.includes("Salary & Payroll")?"Salary & Payroll":"Uncategorized";
+  if(d.includes("listrik")||d.includes("pln")||d.includes("pdam")||d.includes("telkom"))return categories.includes("Utility & Overhead")?"Utility & Overhead":"Uncategorized";
+  if(d.includes("shopee")||d.includes("tokopedia")||d.includes("lazada"))return categories.includes("E-commerce Purchase")?"E-commerce Purchase":"Uncategorized";
+  if(d.includes("refund")||d.includes("pengembalian")||d.includes("pembayaran"))return type==="in"?(categories.includes("Customer Refund")?"Customer Refund":"Other Income"):"Uncategorized";
+  if(d.includes("supplier")||d.includes("vendor"))return categories.includes("Supplier Payment")?"Supplier Payment":"Uncategorized";
+  if(d.includes("claude")||d.includes("openai")||d.includes("chatgpt")||d.includes("google one")||d.includes("google workspace")||d.includes("digitalocean")||d.includes("mailgun")||d.includes("managewp")||d.includes("kommo")||d.includes("apple")||d.includes("playstation"))return categories.includes("Software & Subscriptions")?"Software & Subscriptions":"Uncategorized";
+  if(d.includes("bunga")||d.includes("biaya")||d.includes("meterai")||d.includes("keterlambatan"))return categories.includes("Utility & Overhead")?"Utility & Overhead":"Uncategorized";
   return type==="in"?(categories.includes("Other Income")?"Other Income":"Uncategorized"):(categories.includes("Other Expense")?"Other Expense":"Uncategorized");
 };
-
-// ── AI screenshot extraction ──────────────────────────────────────────────────
 const extractViaAI=async(base64,mediaType)=>{
   const response=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:2000,messages:[{role:"user",content:[
@@ -239,9 +186,69 @@ const extractViaAI=async(base64,mediaType)=>{
   return JSON.parse((data.content||[]).map(b=>b.text||"").join("").replace(/```json|```/g,"").trim());
 };
 
+// ── Password Gate ─────────────────────────────────────────────────────────────
+function PasswordGate({onUnlock}){
+  const [input,setInput]=useState("");
+  const [error,setError]=useState(false);
+  const [shake,setShake]=useState(false);
+  const submit=()=>{
+    if(input===APP_PASSWORD){onUnlock();}
+    else{setError(true);setShake(true);setInput("");setTimeout(()=>setShake(false),600);}
+  };
+  return(
+    <div style={{fontFamily:"'EB Garamond',Georgia,serif",background:"#faf8f4",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=UnifrakturMaguntia&display=swap');*{box-sizing:border-box;margin:0;padding:0;}@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}.shake{animation:shake 0.5s ease;}`}</style>
+      <div style={{textAlign:"center",marginBottom:40}}>
+        <div style={{fontFamily:"'UnifrakturMaguntia',cursive",fontSize:52,lineHeight:1,color:"#1a1a1a",marginBottom:8}}>The Finance Ledger</div>
+        <div style={{fontSize:11,letterSpacing:"0.18em",textTransform:"uppercase",color:"#aaa"}}>Restricted Access</div>
+      </div>
+      <div style={{borderTop:"2px solid #1a1a1a",borderBottom:"1px solid #1a1a1a",padding:"32px 48px",width:340,textAlign:"center"}} className={shake?"shake":""}>
+        <div style={{fontSize:11,letterSpacing:"0.14em",textTransform:"uppercase",color:"#777",marginBottom:20}}>Enter Password to Continue</div>
+        <input type="password" value={input} onChange={e=>{setInput(e.target.value);setError(false);}} onKeyDown={e=>e.key==="Enter"&&submit()} placeholder="········" autoFocus
+          style={{width:"100%",fontFamily:"'EB Garamond',Georgia,serif",background:"#faf8f4",border:"none",borderBottom:`1px solid ${error?"#4a1a1a":"#1a1a1a"}`,padding:"10px 4px",fontSize:18,outline:"none",textAlign:"center",letterSpacing:"0.2em",color:error?"#4a1a1a":"#1a1a1a",marginBottom:8}}/>
+        {error&&<div style={{fontSize:12,color:"#4a1a1a",fontStyle:"italic",marginBottom:12}}>Incorrect password. Try again.</div>}
+        {!error&&<div style={{marginBottom:12}}/>}
+        <button onClick={submit} style={{width:"100%",fontFamily:"'EB Garamond',Georgia,serif",background:"#1a1a1a",color:"#faf8f4",border:"none",padding:"12px",fontSize:13,letterSpacing:"0.1em",textTransform:"uppercase",cursor:"pointer"}}>Enter</button>
+      </div>
+      <div style={{marginTop:32,fontSize:11,color:"#ccc",letterSpacing:"0.1em",textTransform:"uppercase"}}>The Finance Ledger &nbsp;·&nbsp; Phase I</div>
+    </div>
+  );
+}
+
+// ── Entity Picker ─────────────────────────────────────────────────────────────
+function EntityPicker({entities,onSelect}){
+  return(
+    <div style={{fontFamily:"'EB Garamond',Georgia,serif",background:"#faf8f4",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=UnifrakturMaguntia&display=swap');*{box-sizing:border-box;margin:0;padding:0;}.entity-card{border:1px solid #ccc;padding:28px 40px;cursor:pointer;transition:all 0.2s;text-align:center;background:#faf8f4;min-width:260px;}.entity-card:hover{border-color:#1a1a1a;background:#f0ede6;}`}</style>
+      <div style={{textAlign:"center",marginBottom:48}}>
+        <div style={{fontFamily:"'UnifrakturMaguntia',cursive",fontSize:52,lineHeight:1,color:"#1a1a1a",marginBottom:8}}>The Finance Ledger</div>
+        <div style={{fontSize:11,letterSpacing:"0.18em",textTransform:"uppercase",color:"#aaa"}}>Select Entity to Continue</div>
+      </div>
+      <div style={{borderTop:"2px solid #1a1a1a",width:"100%",maxWidth:620,marginBottom:32}}/>
+      <div style={{display:"flex",gap:24,flexWrap:"wrap",justifyContent:"center"}}>
+        {entities.map(e=>(
+          <div key={e.name} className="entity-card" onClick={()=>onSelect(e)}>
+            <div style={{width:12,height:12,borderRadius:"50%",background:e.color,margin:"0 auto 14px"}}/>
+            <div style={{fontSize:11,letterSpacing:"0.12em",textTransform:"uppercase",color:"#aaa",marginBottom:8}}>Entity</div>
+            <div style={{fontSize:20,fontWeight:600,lineHeight:1.3}}>{e.name}</div>
+            <div style={{fontSize:13,color:"#999",marginTop:6,fontStyle:"italic"}}>{e.short_name}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{borderBottom:"1px solid #1a1a1a",width:"100%",maxWidth:620,marginTop:32}}/>
+      <div style={{marginTop:24,fontSize:11,color:"#ccc",letterSpacing:"0.1em",textTransform:"uppercase"}}>The Finance Ledger &nbsp;·&nbsp; Phase I</div>
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
-export default function FinanceHub() {
+export default function FinanceHub(){
   const [unlocked,setUnlocked]=useState(()=>sessionStorage.getItem("kf_auth")==="1");
+  const [entities,setEntities]=useState([]);
+  const [currentEntity,setCurrentEntity]=useState(()=>{
+    const saved=sessionStorage.getItem("kf_entity");
+    return saved?JSON.parse(saved):null;
+  });
   const [transactions,setTransactions]=useState([]);
   const [sources,setSources]=useState([]);
   const [categories,setCategories]=useState([]);
@@ -263,54 +270,51 @@ export default function FinanceHub() {
   const [newSourceImportType,setNewSourceImportType]=useState("file");
   const [newSourceColor,setNewSourceColor]=useState("#1a3a5c");
   const [newCatName,setNewCatName]=useState("");
-  const fileRef=useRef(); const imgRef=useRef(); const pdfRef=useRef();
+  const fileRef=useRef();const imgRef=useRef();const pdfRef=useRef();
 
   const showToast=(msg,type="success")=>{setToast({msg,type});setTimeout(()=>setToast(null),3800);};
   const autoCategory=makeAutoCategory(categories);
 
-  // ── Load from Supabase on mount ───────────────────────────────────────────
+  // Load entities on mount
   useEffect(()=>{
+    sb.from("entities").select("*").order("sort_order").then(({data})=>{
+      if(data&&data.length)setEntities(data);
+    });
+  },[]);
+
+  // Load data when entity changes
+  useEffect(()=>{
+    if(!currentEntity)return;
     const init=async()=>{
       setLoading(true);
-      try {
-        // Load sources
+      setTransactions([]);
+      try{
         let {data:srcData}=await sb.from("sources").select("*").order("sort_order");
-        if(!srcData||srcData.length===0){
-          // Seed defaults
-          const toInsert=DEFAULT_SOURCES.map((s,i)=>({...s,sort_order:i}));
-          const {data:inserted}=await sb.from("sources").insert(toInsert).select();
+        if(!srcData||!srcData.length){
+          const {data:inserted}=await sb.from("sources").insert(DEFAULT_SOURCES.map((s,i)=>({...s,sort_order:i}))).select();
           srcData=inserted||DEFAULT_SOURCES;
         }
         setSources(srcData||[]);
-
-        // Load categories
         let {data:catData}=await sb.from("categories").select("*").order("sort_order");
-        if(!catData||catData.length===0){
-          const toInsert=DEFAULT_CATEGORIES.map((name,i)=>({name,sort_order:i}));
-          const {data:inserted}=await sb.from("categories").insert(toInsert).select();
+        if(!catData||!catData.length){
+          const {data:inserted}=await sb.from("categories").insert(DEFAULT_CATEGORIES.map((name,i)=>({name,sort_order:i}))).select();
           catData=inserted||DEFAULT_CATEGORIES.map(name=>({name}));
         }
         setCategories((catData||[]).map(c=>c.name));
-
-        // Load transactions
-        const {data:txData}=await sb.from("transactions").select("*").order("date",{ascending:false});
+        const {data:txData}=await sb.from("transactions").select("*").eq("entity",currentEntity.name).order("date",{ascending:false});
         setTransactions(txData||[]);
-      } catch(e){
-        showToast("Could not connect to database.","error");
-      }
+      }catch(e){showToast("Could not connect to database.","error");}
       setLoading(false);
     };
     init();
-  },[]);
+  },[currentEntity]);
 
-  // ── DB helpers ────────────────────────────────────────────────────────────
   const saveTransactions=async(rows)=>{
     const catList=categories.length>0?categories:DEFAULT_CATEGORIES;
     const ac=makeAutoCategory(catList);
     const toInsert=rows.map(r=>({
-      id:r.id||crypto.randomUUID(),
-      date:r.date, description:r.description,
-      amount:r.amount, type:r.type, source:r.source,
+      id:r.id||crypto.randomUUID(),date:r.date,description:r.description,
+      amount:r.amount,type:r.type,source:r.source,entity:currentEntity.name,
       category:r.category==="Uncategorized"?ac(r.description,r.type):r.category,
     }));
     const {data,error}=await sb.from("transactions").upsert(toInsert).select();
@@ -326,59 +330,50 @@ export default function FinanceHub() {
     await sb.from("transactions").update({category:cat}).eq("id",id);
     setTransactions(prev=>prev.map(t=>t.id===id?{...t,category:cat}:t));
   };
-
   const deleteTransactionDB=async(id)=>{
     await sb.from("transactions").delete().eq("id",id);
     setTransactions(prev=>prev.filter(t=>t.id!==id));
   };
-
   const applyBulkCatDB=async()=>{
     if(!bulkCat){showToast("Select a category first.","error");return;}
     const ids=[...selected];
     await sb.from("transactions").update({category:bulkCat}).in("id",ids);
     setTransactions(prev=>prev.map(t=>selected.has(t.id)?{...t,category:bulkCat}:t));
     showToast(`Updated ${ids.length} entr${ids.length===1?"y":"ies"} to "${bulkCat}".`);
-    setSelected(new Set()); setBulkCat("");
+    setSelected(new Set());setBulkCat("");
   };
-
   const addSourceDB=async()=>{
     const name=newSourceName.trim();
     if(!name){showToast("Enter a source name.","error");return;}
     if(sources.find(s=>s.name===name)){showToast("Source already exists.","error");return;}
-    const newSrc={name,color:newSourceColor,import_type:newSourceImportType,sort_order:sources.length};
-    const {data}=await sb.from("sources").insert(newSrc).select();
-    if(data) setSources(prev=>[...prev,...data]);
-    setNewSourceName(""); showToast(`Source "${name}" added.`);
+    const {data}=await sb.from("sources").insert({name,color:newSourceColor,import_type:newSourceImportType,sort_order:sources.length}).select();
+    if(data)setSources(prev=>[...prev,...data]);
+    setNewSourceName("");showToast(`Source "${name}" added.`);
   };
-
   const removeSourceDB=async(name)=>{
     if(["BCA","Manual"].includes(name)){showToast("Cannot remove default sources.","error");return;}
     await sb.from("sources").delete().eq("name",name);
-    setSources(prev=>prev.filter(s=>s.name!==name));
-    showToast(`Source "${name}" removed.`);
+    setSources(prev=>prev.filter(s=>s.name!==name));showToast(`Source "${name}" removed.`);
   };
-
   const addCategoryDB=async()=>{
     const name=newCatName.trim();
     if(!name){showToast("Enter a category name.","error");return;}
     if(categories.includes(name)){showToast("Category already exists.","error");return;}
     const {data}=await sb.from("categories").insert({name,sort_order:categories.length}).select();
-    if(data) setCategories(prev=>[...prev.filter(c=>c!=="Uncategorized"),name,"Uncategorized"]);
-    setNewCatName(""); showToast(`Category "${name}" added.`);
+    if(data)setCategories(prev=>[...prev.filter(c=>c!=="Uncategorized"),name,"Uncategorized"]);
+    setNewCatName("");showToast(`Category "${name}" added.`);
   };
-
   const removeCategoryDB=async(name)=>{
     if(name==="Uncategorized"){showToast("Cannot remove Uncategorized.","error");return;}
     await sb.from("categories").delete().eq("name",name);
-    await sb.from("transactions").update({category:"Uncategorized"}).eq("category",name);
+    await sb.from("transactions").update({category:"Uncategorized"}).eq("category",name).eq("entity",currentEntity.name);
     setCategories(prev=>prev.filter(c=>c!==name));
     setTransactions(prev=>prev.map(t=>t.category===name?{...t,category:"Uncategorized"}:t));
-    showToast(`"${name}" removed. Affected entries set to Uncategorized.`);
+    showToast(`"${name}" removed.`);
   };
 
-  // ── File handlers ─────────────────────────────────────────────────────────
   const handleFileUpload=async(e)=>{
-    const file=e.target.files[0]; if(!file) return;
+    const file=e.target.files[0];if(!file)return;
     const ext=file.name.split(".").pop().toLowerCase();
     setUploading(true);
     try{
@@ -386,36 +381,33 @@ export default function FinanceHub() {
       if(ext==="csv"||ext==="txt"){rows=parseCSVText(await file.text(),uploadSource);}
       else if(["xls","xlsx","xlsm"].includes(ext)){rows=parseXLSXBuffer(new Uint8Array(await file.arrayBuffer()),uploadSource);}
       else{showToast("Use CSV, XLS, or XLSX.","error");setUploading(false);return;}
-      if(!rows.length) showToast("No transactions found.","error");
+      if(!rows.length)showToast("No transactions found.","error");
       else await saveTransactions(rows);
     }catch{showToast("Failed to parse file.","error");}
-    setUploading(false); e.target.value="";
+    setUploading(false);e.target.value="";
   };
-
   const handlePDFUpload=async(e)=>{
-    const file=e.target.files[0]; if(!file) return;
+    const file=e.target.files[0];if(!file)return;
     setUploadingPDF(true);
     try{
       const rows=await parsePDFBuffer(await file.arrayBuffer(),uploadSource);
-      if(!rows.length) showToast("No transactions found in PDF.","error");
+      if(!rows.length)showToast("No transactions found in PDF.","error");
       else await saveTransactions(rows);
     }catch{showToast("PDF parsing failed. Try CSV or XLS instead.","error");}
-    setUploadingPDF(false); e.target.value="";
+    setUploadingPDF(false);e.target.value="";
   };
-
   const handleScreenshotUpload=async(e)=>{
-    const file=e.target.files[0]; if(!file) return;
+    const file=e.target.files[0];if(!file)return;
     setExtractingAI(true);
     try{
       const base64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(file);});
       const parsed=await extractViaAI(base64,file.type||"image/jpeg");
       const rows=parsed.map(r=>({id:crypto.randomUUID(),date:r.date,description:r.description,amount:r.type==="out"?-Math.abs(r.amount):Math.abs(r.amount),type:r.type,source:uploadSource,category:"Uncategorized"}));
-      if(!rows.length) showToast("No transactions found.","error");
+      if(!rows.length)showToast("No transactions found.","error");
       else await saveTransactions(rows);
     }catch{showToast("Extraction failed. Try manual entry.","error");}
-    setExtractingAI(false); e.target.value="";
+    setExtractingAI(false);e.target.value="";
   };
-
   const handleManualAdd=async()=>{
     if(!manualForm.date||!manualForm.description||!manualForm.amount){showToast("All fields required.","error");return;}
     const amt=parseFloat(manualForm.amount);
@@ -423,25 +415,23 @@ export default function FinanceHub() {
       amount:manualForm.type==="out"?-Math.abs(amt):Math.abs(amt),type:manualForm.type,source:manualForm.source,category:manualForm.category}]);
     setManualForm(f=>({...f,date:"",description:"",amount:""}));
   };
-
   const exportAccurate=()=>{
     if(!transactions.length){showToast("No transactions to export.","error");return;}
-    const header="Tanggal,Keterangan,Debit,Kredit,Kategori,Sumber";
-    const rows=transactions.map(t=>`${t.date},"${t.description}",${t.type==="out"?Math.abs(t.amount):0},${t.type==="in"?Math.abs(t.amount):0},${t.category},${t.source}`);
+    const header="Tanggal,Keterangan,Debit,Kredit,Kategori,Sumber,Entitas";
+    const rows=transactions.map(t=>`${t.date},"${t.description}",${t.type==="out"?Math.abs(t.amount):0},${t.type==="in"?Math.abs(t.amount):0},${t.category},${t.source},${t.entity}`);
     const blob=new Blob([[header,...rows].join("\n")],{type:"text/csv"});
-    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`ledger-${new Date().toISOString().split("T")[0]}.csv`;a.click();
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`ledger-${currentEntity.short_name}-${new Date().toISOString().split("T")[0]}.csv`;a.click();
     showToast("Ledger exported for Accurate.id.");
   };
 
   const toggleSelect=(id)=>setSelected(prev=>{const s=new Set(prev);s.has(id)?s.delete(id):s.add(id);return s;});
   const toggleAll=(ids)=>setSelected(prev=>prev.size===ids.length?new Set():new Set(ids));
 
-  // ── Derived ───────────────────────────────────────────────────────────────
   const filtered=transactions.filter(t=>{
-    if(filterSource!=="All"&&t.source!==filterSource) return false;
-    if(filterType!=="All"&&t.type!==filterType) return false;
-    if(filterCategory!=="All"&&t.category!==filterCategory) return false;
-    if(searchQuery&&!t.description.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if(filterSource!=="All"&&t.source!==filterSource)return false;
+    if(filterType!=="All"&&t.type!==filterType)return false;
+    if(filterCategory!=="All"&&t.category!==filterCategory)return false;
+    if(searchQuery&&!t.description.toLowerCase().includes(searchQuery.toLowerCase()))return false;
     return true;
   });
   const filteredIds=filtered.map(t=>t.id);
@@ -458,21 +448,22 @@ export default function FinanceHub() {
     total:transactions.filter(t=>t.category===c).reduce((s,t)=>s+Math.abs(t.amount),0),
     count:transactions.filter(t=>t.category===c).length
   })).filter(c=>c.count>0).sort((a,b)=>b.total-a.total);
-  const currentSource=sources.find(s=>s.name===uploadSource);
-  const isScreenshotOnly=currentSource?.import_type==="screenshot";
+  const isScreenshotOnly=sources.find(s=>s.name===uploadSource)?.import_type==="screenshot";
 
   const inputStyle={fontFamily:"'EB Garamond',Georgia,serif",background:"#faf8f4",border:"none",borderBottom:"1px solid #1a1a1a",color:"#1a1a1a",padding:"8px 4px",fontSize:15,outline:"none",width:"100%",borderRadius:0};
   const selectStyle={...inputStyle,cursor:"pointer"};
 
-  if(!unlocked) return <PasswordGate onUnlock={()=>{sessionStorage.setItem("kf_auth","1");setUnlocked(true);}}/>;
-  if(loading) return (
+  // ── Gates ────────────────────────────────────────────────────────────────
+  if(!unlocked)return <PasswordGate onUnlock={()=>{sessionStorage.setItem("kf_auth","1");setUnlocked(true);}}/>;
+  if(!currentEntity)return <EntityPicker entities={entities.length?entities:[{name:"PT Hidup Lebih Tentram",short_name:"Tentram",color:"#1a3a5c"},{name:"PT Semangat Solusi Digital",short_name:"Solusi Digital",color:"#7a1c1c"}]} onSelect={e=>{sessionStorage.setItem("kf_entity",JSON.stringify(e));setCurrentEntity(e);}}/>;
+  if(loading)return(
     <div style={{fontFamily:"'EB Garamond',Georgia,serif",background:"#faf8f4",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}}>
       <div style={{fontFamily:"'UnifrakturMaguntia',cursive",fontSize:48,color:"#1a1a1a"}}>The Finance Ledger</div>
-      <div style={{fontSize:14,color:"#aaa",fontStyle:"italic",letterSpacing:"0.1em"}}>Connecting to database…</div>
+      <div style={{fontSize:14,color:"#aaa",fontStyle:"italic",letterSpacing:"0.1em"}}>Loading {currentEntity.name}…</div>
     </div>
   );
 
-  return (
+  return(
     <div style={{fontFamily:"'EB Garamond',Georgia,serif",background:"#faf8f4",minHeight:"100vh",color:"#1a1a1a"}}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500&family=UnifrakturMaguntia&display=swap');
@@ -502,6 +493,8 @@ export default function FinanceHub() {
         .chk{width:15px;height:15px;cursor:pointer;accent-color:#1a1a1a;}
         tr.sel td{background:#f0ede6 !important;}
         .fmt-badge{display:inline-block;font-size:10px;letter-spacing:0.08em;padding:1px 6px;border:1px solid #ccc;text-transform:uppercase;color:#888;}
+        .switch-btn{background:none;border:1px solid #ccc;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;padding:4px 12px;color:#888;transition:all 0.15s;}
+        .switch-btn:hover{border-color:#1a1a1a;color:#1a1a1a;}
       `}</style>
 
       {/* Masthead */}
@@ -509,8 +502,11 @@ export default function FinanceHub() {
         <div style={{textAlign:"center",borderBottom:"1px solid #1a1a1a",paddingBottom:12,marginBottom:10}}>
           <div style={{fontSize:11,letterSpacing:"0.2em",textTransform:"uppercase",color:"#555",marginBottom:8}}>{todayStr()}</div>
           <div style={{fontFamily:"'UnifrakturMaguntia',cursive",fontSize:56,lineHeight:1,color:"#1a1a1a"}}>The Finance Ledger</div>
-          <div style={{fontSize:11,letterSpacing:"0.15em",textTransform:"uppercase",color:"#555",marginTop:6}}>
-            Consolidated Financial Record &nbsp;·&nbsp; {sources.filter(s=>s.name!=="Manual").length} Sources &nbsp;·&nbsp; Phase I Edition
+          {/* Entity badge */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginTop:8}}>
+            <div style={{width:8,height:8,borderRadius:"50%",background:currentEntity.color}}/>
+            <div style={{fontSize:12,letterSpacing:"0.12em",textTransform:"uppercase",color:"#555"}}>{currentEntity.name}</div>
+            <button className="switch-btn" onClick={()=>{sessionStorage.removeItem("kf_entity");setCurrentEntity(null);setTransactions([]);}}>Switch Entity</button>
           </div>
         </div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingBottom:10}}>
@@ -578,7 +574,7 @@ export default function FinanceHub() {
                   <div style={{textAlign:"center",color:"#bbb",fontSize:15,fontStyle:"italic",padding:"44px 0",lineHeight:1.8}}>Categories appear once<br/>transactions are recorded.</div>
                 ):byCategory.slice(0,8).map((c,i)=>{
                   const max=byCategory[0].total;
-                  return (
+                  return(
                     <div key={c.category} style={{marginBottom:16}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:5}}>
                         <div style={{display:"flex",alignItems:"baseline",gap:10}}>
@@ -602,7 +598,7 @@ export default function FinanceHub() {
         {activeTab==="ledger"&&(
           <div>
             <div style={{borderTop:"2px solid #1a1a1a",borderBottom:"1px solid #1a1a1a",padding:"6px 0",marginBottom:20,textAlign:"center"}}>
-              <span style={{fontSize:11,letterSpacing:"0.14em",textTransform:"uppercase"}}>General Ledger — All Entries</span>
+              <span style={{fontSize:11,letterSpacing:"0.14em",textTransform:"uppercase"}}>General Ledger — {currentEntity.name}</span>
             </div>
             <div style={{display:"flex",gap:12,marginBottom:16,alignItems:"flex-end",flexWrap:"wrap",borderBottom:"1px solid #e0dcd4",paddingBottom:14}}>
               <div style={{flex:1,minWidth:160}}><label className="field-label">Search</label><input placeholder="Search entries…" value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} style={inputStyle}/></div>
@@ -668,8 +664,7 @@ export default function FinanceHub() {
                 <tfoot>
                   <tr style={{borderTop:"2px solid #1a1a1a"}}>
                     <td/><td colSpan={5} style={{padding:"10px 10px",fontSize:12,letterSpacing:"0.08em",textTransform:"uppercase",color:"#777",fontStyle:"italic"}}>Net total — {filtered.length} entries</td>
-                    <td style={{padding:"10px 10px",textAlign:"right",fontSize:17,fontWeight:700,fontStyle:"italic",
-                      color:filtered.reduce((s,t)=>s+(t.type==="in"?Math.abs(t.amount):-Math.abs(t.amount)),0)>=0?"#1a4a1a":"#4a1a1a"}}>
+                    <td style={{padding:"10px 10px",textAlign:"right",fontSize:17,fontWeight:700,fontStyle:"italic",color:filtered.reduce((s,t)=>s+(t.type==="in"?Math.abs(t.amount):-Math.abs(t.amount)),0)>=0?"#1a4a1a":"#4a1a1a"}}>
                       {fmt(filtered.reduce((s,t)=>s+(t.type==="in"?Math.abs(t.amount):-Math.abs(t.amount)),0))}
                     </td>
                     <td/>
@@ -684,7 +679,7 @@ export default function FinanceHub() {
         {activeTab==="upload"&&(
           <div style={{maxWidth:620}}>
             <div style={{borderTop:"2px solid #1a1a1a",borderBottom:"1px solid #1a1a1a",padding:"6px 0",marginBottom:26,textAlign:"center"}}>
-              <span style={{fontSize:11,letterSpacing:"0.14em",textTransform:"uppercase"}}>Import Statements</span>
+              <span style={{fontSize:11,letterSpacing:"0.14em",textTransform:"uppercase"}}>Import Statements — {currentEntity.short_name}</span>
             </div>
             <div style={{marginBottom:24}}>
               <label className="field-label">Select Payment Source</label>
@@ -701,7 +696,7 @@ export default function FinanceHub() {
                   <div style={{fontSize:19,fontWeight:600}}>Upload Statement File</div>
                   <span className="fmt-badge">CSV</span><span className="fmt-badge">XLS</span><span className="fmt-badge">XLSX</span>
                 </div>
-                <div style={{fontSize:14,color:"#777",marginBottom:16,fontStyle:"italic",lineHeight:1.7}}>Export your {uploadSource} statement in any supported format. Columns are detected automatically.</div>
+                <div style={{fontSize:14,color:"#777",marginBottom:16,fontStyle:"italic",lineHeight:1.7}}>Export your {uploadSource} statement. Columns detected automatically.</div>
                 <div className={`upload-zone${uploading?" busy":""}`} onClick={()=>fileRef.current?.click()}>
                   <div style={{fontSize:32,marginBottom:8,color:"#ccc"}}>☰</div>
                   <div style={{fontSize:16}}>{uploading?"Parsing file…":"Click to select file"}</div>
@@ -713,13 +708,13 @@ export default function FinanceHub() {
                 <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:4}}>
                   <div style={{fontSize:19,fontWeight:600}}>Upload PDF Statement</div>
                   <span className="fmt-badge">PDF</span>
-                  <span style={{fontSize:11,letterSpacing:"0.08em",textTransform:"uppercase",border:"1px solid #aaa",padding:"2px 8px",color:"#777"}}>Client-side · No API</span>
+                  <span style={{fontSize:11,letterSpacing:"0.08em",textTransform:"uppercase",border:"1px solid #aaa",padding:"2px 8px",color:"#777"}}>Client-side</span>
                 </div>
-                <div style={{fontSize:14,color:"#777",marginBottom:16,fontStyle:"italic",lineHeight:1.7}}>Digital PDF bank statements. Text is read directly in your browser — nothing sent to a server. Optimised for BCA Credit Card; works with most Indonesian bank PDFs.</div>
+                <div style={{fontSize:14,color:"#777",marginBottom:16,fontStyle:"italic",lineHeight:1.7}}>Digital PDF bank statements. Text read directly in browser. Optimised for BCA Credit Card.</div>
                 <div className={`upload-zone${uploadingPDF?" busy":""}`} onClick={()=>pdfRef.current?.click()}>
                   <div style={{fontSize:32,marginBottom:8,color:"#ccc"}}>⊞</div>
                   <div style={{fontSize:16}}>{uploadingPDF?"Reading PDF…":"Click to select PDF"}</div>
-                  <div style={{fontSize:13,color:"#aaa",marginTop:4,fontStyle:"italic"}}>Digital PDFs only · use screenshot for scanned ones</div>
+                  <div style={{fontSize:13,color:"#aaa",marginTop:4,fontStyle:"italic"}}>Digital PDFs only</div>
                 </div>
                 <input ref={pdfRef} type="file" accept=".pdf" style={{display:"none"}} onChange={handlePDFUpload}/>
               </div>
@@ -746,7 +741,7 @@ export default function FinanceHub() {
         {activeTab==="manual"&&(
           <div style={{maxWidth:520}}>
             <div style={{borderTop:"2px solid #1a1a1a",borderBottom:"1px solid #1a1a1a",padding:"6px 0",marginBottom:30,textAlign:"center"}}>
-              <span style={{fontSize:11,letterSpacing:"0.14em",textTransform:"uppercase"}}>Record Entry Manually</span>
+              <span style={{fontSize:11,letterSpacing:"0.14em",textTransform:"uppercase"}}>Record Entry — {currentEntity.short_name}</span>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:28,marginBottom:24}}>
               <div><label className="field-label">Date</label><input type="date" value={manualForm.date} onChange={e=>setManualForm(f=>({...f,date:e.target.value}))} style={inputStyle}/></div>
@@ -843,10 +838,13 @@ export default function FinanceHub() {
       </div>
 
       {/* Footer */}
-      <div style={{borderTop:"3px double #1a1a1a",margin:"0 40px",padding:"14px 0",textAlign:"center"}}>
+      <div style={{borderTop:"3px double #1a1a1a",margin:"0 40px",padding:"14px 0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{fontSize:11,color:"#bbb",letterSpacing:"0.1em",textTransform:"uppercase"}}>
-          The Finance Ledger &nbsp;·&nbsp; Consolidated Cash Flow Record &nbsp;·&nbsp; All Rights Reserved
+          The Finance Ledger &nbsp;·&nbsp; {currentEntity.name} &nbsp;·&nbsp; Phase I
         </div>
+        <button className="switch-btn" onClick={()=>{sessionStorage.removeItem("kf_entity");setCurrentEntity(null);setTransactions([]);}} style={{fontSize:11}}>
+          Switch Entity
+        </button>
       </div>
 
       {/* Toast */}
