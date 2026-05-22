@@ -341,7 +341,7 @@ export default function FinanceHub(){
       category:r.category==="Uncategorized"?ac(r.description,r.type):r.category,
     }));
     const {data,error}=await sb.from("transactions").upsert(toInsert).select();
-    if(error){showToast("Failed to save transactions.","error");return;}
+    if(error){showToast("DB error: "+error.message,"error");console.error("Supabase error:",error);return;}
     setTransactions(prev=>{
       const ids=new Set((data||[]).map(t=>t.id));
       return [...prev.filter(t=>!ids.has(t.id)),...(data||[])].sort((a,b)=>b.date.localeCompare(a.date));
@@ -404,9 +404,9 @@ export default function FinanceHub(){
       if(ext==="csv"||ext==="txt"){rows=parseCSVText(await file.text(),uploadSource);}
       else if(["xls","xlsx","xlsm"].includes(ext)){rows=parseXLSXBuffer(new Uint8Array(await file.arrayBuffer()),uploadSource);}
       else{showToast("Use CSV, XLS, or XLSX.","error");setUploading(false);return;}
-      if(!rows.length)showToast("No transactions found.","error");
+      if(!rows.length)showToast("No transactions found in file.","error");
       else await saveTransactions(rows);
-    }catch{showToast("Failed to parse file.","error");}
+    }catch(err){showToast("Parse error: "+err.message,"error");console.error("CSV parse error:",err);}
     setUploading(false);e.target.value="";
   };
   const handlePDFUpload=async(e)=>{
