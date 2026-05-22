@@ -107,14 +107,16 @@ const parsePDFBuffer=async(arrayBuffer,source)=>{
   if(/REKENING KARTU KREDIT|KARTU KREDIT BCA/i.test(text))return parseBCACreditCardPDF(text,source);
   return parseGenericPDF(text,source);
 };
-// BCA Corporate (Mutasi Rekening) - amount+type in one column e.g. "25,000.00 CR"
+// BCA Corporate (Mutasi Rekening) - fields wrapped in quotes, separated by ","
 const parseBCACorporateCSV=(text,source)=>{
   const rows=[];
   for(const line of text.split("\n")){
-    const cols=line.split(",").map(c=>c.replace(/^"|"$/g,"").trim());
+    const l=line.trim().replace(/^"|"$/g,"");
+    const cols=l.split('","').map(c=>c.replace(/^"|"$/g,"").trim());
     if(cols.length<4)continue;
     const dateStr=parseCSVDate(cols[0]);if(!dateStr)continue;
     const desc=cols[1]||"";
+    // Amount col may itself contain commas: "25,000.00 CR"
     const amtRaw=cols.slice(3).join(",");
     const amtMatch=amtRaw.match(/([\d,]+\.?\d*)\s*(CR|DB)/i);
     if(!amtMatch)continue;
