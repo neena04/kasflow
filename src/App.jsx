@@ -107,6 +107,23 @@ const parsePDFBuffer=async(arrayBuffer,source)=>{
   if(/REKENING KARTU KREDIT|KARTU KREDIT BCA/i.test(text))return parseBCACreditCardPDF(text,source);
   return parseGenericPDF(text,source);
 };
+// BCA Corporate (Mutasi Rekening) - amount+type in one column e.g. "25,000.00 CR"
+const parseBCACorporateCSV=(text,source)=>{
+  const rows=[];
+  for(const line of text.split("\n")){
+    const cols=line.split(",").map(c=>c.replace(/^"|"$/g,"").trim());
+    if(cols.length<4)continue;
+    const dateStr=parseCSVDate(cols[0]);if(!dateStr)continue;
+    const desc=cols[1]||"";
+    const amtRaw=cols.slice(3).join(",");
+    const amtMatch=amtRaw.match(/([\d,]+\.?\d*)\s*(CR|DB)/i);
+    if(!amtMatch)continue;
+    const amount=parseAmount(amtMatch[1]);if(amount===0)continue;
+    const isCredit=amtMatch[2].toUpperCase()==="CR";
+    rows.push({id:crypto.randomUUID(),date:dateStr,description:desc,amount:isCredit?amount:-amount,type:isCredit?"in":"out",source,category:"Uncategorized"});
+  }
+  return rows;
+};
 const parseBCACSV=(text,source)=>text.trim().split("\n").filter(l=>l.trim()).flatMap(line=>{
   const cols=line.split(",").map(c=>c.replace(/^"|"$/g,"").trim());
   if(cols.length<4)return [];
@@ -137,7 +154,11 @@ const parseGenericCSV=(text,source)=>{
     return [{id:crypto.randomUUID(),date,description:obj[descKey]||"",amount,type:amount>=0?"in":"out",source,category:"Uncategorized"}];
   });
 };
-const parseCSVText=(text,source)=>(source==="BCA"||source==="BCA Credit Card")?parseBCACSV(text,source):parseGenericCSV(text,source);
+const parseCSVText=(text,source)=>{
+  if((source==="BCA"||source==="BCA Credit Card")&&/Mutasi Rekening|Kode Mata Uang|TRSF E-BANKING|BI-FAST/i.test(text))return parseBCACorporateCSV(text,source);
+  if(source==="BCA"||source==="BCA Credit Card")return parseBCACSV(text,source);
+  return parseGenericCSV(text,source);
+};
 const parseXLSXBuffer=(buffer,source)=>{
   const wb=XLSX.read(buffer,{type:"array",cellDates:true});
   const sheet=wb.Sheets[wb.SheetNames[0]];
@@ -455,7 +476,7 @@ export default function FinanceHub(){
 
   // ── Gates ────────────────────────────────────────────────────────────────
   if(!unlocked)return <PasswordGate onUnlock={()=>{sessionStorage.setItem("kf_auth","1");setUnlocked(true);}}/>;
-  if(!currentEntity)return <EntityPicker entities={entities.length?entities:[{name:"PT Hidup Lebih Tentram",short_name:"Tentram",color:"#1a3a5c"},{name:"PT Semangat Solusi Digital",short_name:"CreativeQode",color:"#7a1c1c"}]} onSelect={e=>{sessionStorage.setItem("kf_entity",JSON.stringify(e));setCurrentEntity(e);}}/>;
+  if(!currentEntity)return <EntityPicker entities={entities.length?entities:[{name:"PT Hidup Lebih Tentram",short_name:"Tentram",color:"#1a3a5c"},{name:"PT Semangat Solusi Digital",short_name:"Solusi Digital",color:"#7a1c1c"}]} onSelect={e=>{sessionStorage.setItem("kf_entity",JSON.stringify(e));setCurrentEntity(e);}}/>;
   if(loading)return(
     <div style={{fontFamily:"'EB Garamond',Georgia,serif",background:"#faf8f4",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}}>
       <div style={{fontFamily:"'UnifrakturMaguntia',cursive",fontSize:48,color:"#1a1a1a"}}>The Finance Ledger</div>
