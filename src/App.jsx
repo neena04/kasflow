@@ -455,7 +455,7 @@ export default function FinanceHub(){
 
   // ── Gates ────────────────────────────────────────────────────────────────
   if(!unlocked)return <PasswordGate onUnlock={()=>{sessionStorage.setItem("kf_auth","1");setUnlocked(true);}}/>;
-  if(!currentEntity)return <EntityPicker entities={entities.length?entities:[{name:"PT Hidup Lebih Tentram",short_name:"Tentram",color:"#1a3a5c"},{name:"PT Semangat Solusi Digital",short_name:"Solusi Digital",color:"#7a1c1c"}]} onSelect={e=>{sessionStorage.setItem("kf_entity",JSON.stringify(e));setCurrentEntity(e);}}/>;
+  if(!currentEntity)return <EntityPicker entities={entities.length?entities:[{name:"PT Hidup Lebih Tentram",short_name:"Tentram",color:"#1a3a5c"},{name:"PT Semangat Solusi Digital",short_name:"CreativeQode",color:"#7a1c1c"}]} onSelect={e=>{sessionStorage.setItem("kf_entity",JSON.stringify(e));setCurrentEntity(e);}}/>;
   if(loading)return(
     <div style={{fontFamily:"'EB Garamond',Georgia,serif",background:"#faf8f4",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}}>
       <div style={{fontFamily:"'UnifrakturMaguntia',cursive",fontSize:48,color:"#1a1a1a"}}>The Finance Ledger</div>
