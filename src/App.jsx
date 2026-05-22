@@ -2,6 +2,54 @@ import { useState, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { createClient } from "@supabase/supabase-js";
 
+// ── Password Gate ─────────────────────────────────────────────────────────────
+const APP_PASSWORD = "MabocAlways2026!";
+
+function PasswordGate({onUnlock}) {
+  const [input,setInput]=useState("");
+  const [error,setError]=useState(false);
+  const [shake,setShake]=useState(false);
+  const submit=()=>{
+    if(input===APP_PASSWORD){onUnlock();}
+    else{setError(true);setShake(true);setInput("");setTimeout(()=>setShake(false),600);}
+  };
+  return (
+    <div style={{fontFamily:"'EB Garamond',Georgia,serif",background:"#faf8f4",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=UnifrakturMaguntia&display=swap');
+        *{box-sizing:border-box;margin:0;padding:0;}
+        @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+        .shake{animation:shake 0.5s ease;}
+      `}</style>
+      <div style={{textAlign:"center",marginBottom:40}}>
+        <div style={{fontFamily:"'UnifrakturMaguntia',cursive",fontSize:52,lineHeight:1,color:"#1a1a1a",marginBottom:8}}>The Finance Ledger</div>
+        <div style={{fontSize:11,letterSpacing:"0.18em",textTransform:"uppercase",color:"#aaa"}}>Restricted Access</div>
+      </div>
+      <div style={{borderTop:"2px solid #1a1a1a",borderBottom:"1px solid #1a1a1a",padding:"32px 48px",width:340,textAlign:"center"}} className={shake?"shake":""}>
+        <div style={{fontSize:11,letterSpacing:"0.14em",textTransform:"uppercase",color:"#777",marginBottom:20}}>Enter Password to Continue</div>
+        <input
+          type="password"
+          value={input}
+          onChange={e=>{setInput(e.target.value);setError(false);}}
+          onKeyDown={e=>e.key==="Enter"&&submit()}
+          placeholder="········"
+          autoFocus
+          style={{width:"100%",fontFamily:"'EB Garamond',Georgia,serif",background:"#faf8f4",border:"none",borderBottom:`1px solid ${error?"#4a1a1a":"#1a1a1a"}`,padding:"10px 4px",fontSize:18,outline:"none",textAlign:"center",letterSpacing:"0.2em",color:error?"#4a1a1a":"#1a1a1a",marginBottom:8}}
+        />
+        {error&&<div style={{fontSize:12,color:"#4a1a1a",fontStyle:"italic",marginBottom:12}}>Incorrect password. Try again.</div>}
+        {!error&&<div style={{marginBottom:12}}/>}
+        <button onClick={submit}
+          style={{width:"100%",fontFamily:"'EB Garamond',Georgia,serif",background:"#1a1a1a",color:"#faf8f4",border:"none",padding:"12px",fontSize:13,letterSpacing:"0.1em",textTransform:"uppercase",cursor:"pointer"}}>
+          Enter
+        </button>
+      </div>
+      <div style={{marginTop:32,fontSize:11,color:"#ccc",letterSpacing:"0.1em",textTransform:"uppercase"}}>
+        The Finance Ledger &nbsp;·&nbsp; Phase I
+      </div>
+    </div>
+  );
+}
+
 // ── Supabase ──────────────────────────────────────────────────────────────────
 const SUPABASE_URL = "https://mbsgydpeyhlnaiodvdaj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ic2d5ZHBleWxobmFpb2R2ZGFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0MTk1NjEsImV4cCI6MjA5NDk5NTU2MX0.ocqwqozFFbmp9DAVbSezKVQBmcYjMPPjb0dkaq8BPlY";
@@ -193,6 +241,7 @@ const extractViaAI=async(base64,mediaType)=>{
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function FinanceHub() {
+  const [unlocked,setUnlocked]=useState(()=>sessionStorage.getItem("kf_auth")==="1");
   const [transactions,setTransactions]=useState([]);
   const [sources,setSources]=useState([]);
   const [categories,setCategories]=useState([]);
@@ -415,6 +464,7 @@ export default function FinanceHub() {
   const inputStyle={fontFamily:"'EB Garamond',Georgia,serif",background:"#faf8f4",border:"none",borderBottom:"1px solid #1a1a1a",color:"#1a1a1a",padding:"8px 4px",fontSize:15,outline:"none",width:"100%",borderRadius:0};
   const selectStyle={...inputStyle,cursor:"pointer"};
 
+  if(!unlocked) return <PasswordGate onUnlock={()=>{sessionStorage.setItem("kf_auth","1");setUnlocked(true);}}/>;
   if(loading) return (
     <div style={{fontFamily:"'EB Garamond',Georgia,serif",background:"#faf8f4",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}}>
       <div style={{fontFamily:"'UnifrakturMaguntia',cursive",fontSize:48,color:"#1a1a1a"}}>The Finance Ledger</div>
@@ -810,4 +860,3 @@ export default function FinanceHub() {
     </div>
   );
 }
-
