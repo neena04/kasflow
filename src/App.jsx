@@ -14,7 +14,7 @@ const APP_PASSWORD = "MabocAlways2026!";
 const DEFAULT_CATEGORIES = [
   "IPL Collection","Cleaning Supplies","Supplier Payment","E-commerce Purchase",
   "Salary & Payroll","Utility & Overhead","Customer Refund","Software & Subscriptions",
-  "Other Income","Other Expense","Uncategorized",
+  "Inter-account Transfer","Other Income","Other Expense","Uncategorized",
 ];
 const DEFAULT_SOURCES = [
   {name:"BCA",color:"#1a3a5c",import_type:"file"},
@@ -469,10 +469,12 @@ export default function FinanceHub(){
   const filteredIds=filtered.map(t=>t.id);
   // Revenue = only transactions in categories containing "Revenue"
   const totalIn=transactions.filter(t=>t.category.toLowerCase().includes("revenue")).reduce((s,t)=>s+Math.abs(t.amount),0);
-  const totalOut=transactions.filter(t=>t.type==="out").reduce((s,t)=>s+Math.abs(t.amount),0);
-  // Net cash = all money in minus all money out (liquidity, not P&L)
+  // Expenditure excludes inter-account transfers (not real expenses)
+  const totalOut=transactions.filter(t=>t.type==="out"&&t.category!=="Inter-account Transfer").reduce((s,t)=>s+Math.abs(t.amount),0);
+  // Net cash = all money in minus all money out INCLUDING transfers (real cash movement)
   const allIn=transactions.filter(t=>t.type==="in").reduce((s,t)=>s+Math.abs(t.amount),0);
-  const netCash=allIn-totalOut;
+  const allOut=transactions.filter(t=>t.type==="out").reduce((s,t)=>s+Math.abs(t.amount),0);
+  const netCash=allIn-allOut;
   const sourceMap=Object.fromEntries(sources.map(s=>[s.name,s]));
   const bySource=sources.filter(s=>s.name!=="Manual").map(s=>({...s,
     in:transactions.filter(t=>t.source===s.name&&t.type==="in").reduce((sum,t)=>sum+Math.abs(t.amount),0),
@@ -563,7 +565,7 @@ export default function FinanceHub(){
               {[
                 {label:"Total Revenue",value:fmt(totalIn),sub:`${transactions.filter(t=>t.category.toLowerCase().includes("revenue")).length} entries`,pos:true},
                 null,
-                {label:"Total Expenditure",value:fmt(totalOut),sub:`${transactions.filter(t=>t.type==="out").length} payments`,pos:false},
+                {label:"Total Expenditure",value:fmt(totalOut),sub:`${transactions.filter(t=>t.type==="out"&&t.category!=="Inter-account Transfer").length} payments`,pos:false},
                 null,
                 {label:"Net Cash Position",value:fmt(netCash),sub:netCash>=0?"Surplus":"Deficit",pos:netCash>=0},
                 null,
