@@ -3,7 +3,7 @@ import * as XLSX from "xlsx";
 import { createClient } from "@supabase/supabase-js";
 
 // ── Supabase ──────────────────────────────────────────────────────────────────
-const SUPABASE_URL = "https://mbsgydpeyhlnaiodvdaj.supabase.co";
+const SUPABASE_URL = "https://mbsgydpeylhnaiodvdaj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ic2d5ZHBleWxobmFpb2R2ZGFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0MTk1NjEsImV4cCI6MjA5NDk5NTU2MX0.ocqwqozFFbmp9DAVbSezKVQBmcYjMPPjb0dkaq8BPlY";
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
