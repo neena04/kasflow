@@ -3,7 +3,7 @@ import * as XLSX from "xlsx";
 import { createClient } from "@supabase/supabase-js";
 
 // ── Supabase ──────────────────────────────────────────────────────────────────
-const SUPABASE_URL = "https://mbsgydpeylhnaiodvdaj.supabase.co";
+const SUPABASE_URL = "https://mbsgydpeyhlnaiodvdaj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ic2d5ZHBleWxobmFpb2R2ZGFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0MTk1NjEsImV4cCI6MjA5NDk5NTU2MX0.ocqwqozFFbmp9DAVbSezKVQBmcYjMPPjb0dkaq8BPlY";
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -37,18 +37,27 @@ const parseCSVDate=(str)=>{
   if(!str) return "";
   if(typeof str==="number"){const d=XLSX.SSF.parse_date_code(str);if(d)return `${d.y}-${String(d.m).padStart(2,"0")}-${String(d.d).padStart(2,"0")}`;}
   const s=String(str).trim();
-  const d=new Date(s);if(!isNaN(d)&&s.length>=8)return d.toISOString().split("T")[0];
   const parts=s.split(/[\/\-\.]/);
   if(parts.length===3){
-    if(parts[2].length===4)return `${parts[2]}-${parts[1].padStart(2,"0")}-${parts[0].padStart(2,"0")}`;
+    // YYYY-MM-DD or YYYY/MM/DD
     if(parts[0].length===4)return `${parts[0]}-${parts[1].padStart(2,"0")}-${parts[2].padStart(2,"0")}`;
+    // DD/MM/YYYY — Indonesian format, always treat first part as day
+    if(parts[2].length===4)return `${parts[2]}-${parts[1].padStart(2,"0")}-${parts[0].padStart(2,"0")}`;
   }
+  // Last resort: let JS parse (YYYY-MM-DD strings only)
+  const d=new Date(s);if(!isNaN(d)&&s.includes("-"))return d.toISOString().split("T")[0];
   return "";
 };
 const parseAmount=(str)=>{
   if(str===null||str===undefined||str==="")return 0;
   if(typeof str==="number")return str;
-  return parseFloat(String(str).replace(/[^0-9,.\-]/g,"").replace(/\./g,"").replace(",","."))||0;
+  const s=String(str).replace(/[^0-9,.\-]/g,"");
+  // Detect format: if ends with .XX (2 decimal digits), dot is decimal separator
+  // e.g. "70,000,000.00" => remove commas => "70000000.00"
+  // e.g. "25.000,00" (European) => remove dots, replace comma => "25000.00"
+  if(/\.\d{2}$/.test(s)){return parseFloat(s.replace(/,/g,""))||0;}
+  if(/,\d{2}$/.test(s)){return parseFloat(s.replace(/\./g,"").replace(",","."))||0;}
+  return parseFloat(s.replace(/,/g,"").replace(/\./g,""))||0;
 };
 
 // ── PDF.js ────────────────────────────────────────────────────────────────────
@@ -675,7 +684,7 @@ export default function FinanceHub(){
                         {categories.map(c=><option key={c}>{c}</option>)}
                       </select>
                     </td>
-                    <td style={{padding:"10px 6px"}}><span style={{fontSize:12,letterSpacing:"0.05em",textTransform:"uppercase",color:t.type==="in"?"#1a4a1a":"#4a1a1a",fontStyle:"italic"}}>{t.type==="in"?"Receipt":"Payment"}</span></td>
+                    <td style={{padding:"10px 6px"}}><span style={{fontSize:12,letterSpacing:"0.05em",textTransform:"uppercase",color:t.type==="in"?"#1a4a1a":"#4a1a1a",fontStyle:"italic"}}>{t.type==="in"?"CR":"DB"}</span></td>
                     <td style={{padding:"10px 10px",fontSize:15,fontWeight:700,fontStyle:"italic",color:t.type==="in"?"#1a4a1a":"#4a1a1a",textAlign:"right",whiteSpace:"nowrap"}}>
                       {t.type==="out"?"-":"+"}{fmt(Math.abs(t.amount))}
                     </td>
