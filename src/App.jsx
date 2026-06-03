@@ -87,13 +87,21 @@ const resolveDate=(ddmmm)=>{
   return `${year}-${String(mon).padStart(2,"0")}-${day}`;
 };
 const parseBCACreditCardPDF=(text,source)=>{
-  const rows=[];const singleRe=/^(\d{2}[-\/]([A-Z]{3}))\s+(\d{2}[-\/][A-Z]{3})\s+(.+?)\s+([\d.,]+)\s*(CR)?$/i;
+  const rows=[];
+  // Match: DD-MMM DD-MMM DESCRIPTION AMOUNT [CR]
+  // Amount uses Indonesian dots: 9.692.529 or 46.766
+  const singleRe=/^(\d{2}[-\/]([A-Z]{3}))\s+(\d{2}[-\/][A-Z]{3})\s+(.+?)\s+([\d.]+(?:,\d+)?)\s*(CR)?$/i;
+  const parseIDRAmount=(s)=>{
+    // Indonesian format: 9.692.529 (dots=thousands) or 46.766
+    // Remove all dots, treat as integer (no decimal in IDR CC statements)
+    return parseFloat(s.replace(/\./g,""))||0;
+  };
   for(const line of text.split("\n")){
     const m=line.trim().match(singleRe);if(!m)continue;
     const date=resolveDate(m[1]);if(!date)continue;
     const desc=m[4].trim();
-    if(/subtotal|total|saldo|tagihan|kredit limit|batas|tunggakan|meterai lunas/i.test(desc))continue;
-    const amount=parseAmount(m[5]);if(amount===0)continue;
+    if(/subtotal|total|saldo|tagihan baru|kredit limit|batas|tunggakan/i.test(desc))continue;
+    const amount=parseIDRAmount(m[5]);if(amount===0)continue;
     const isCredit=!!(m[6]&&m[6].toUpperCase()==="CR");
     rows.push({id:crypto.randomUUID(),date,description:desc,amount:isCredit?amount:-amount,type:isCredit?"in":"out",source,category:"Uncategorized"});
   }
