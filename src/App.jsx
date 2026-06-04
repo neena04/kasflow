@@ -88,21 +88,39 @@ const resolveDate=(ddmmm)=>{
 };
 const parseBCACreditCardPDF=(text,source)=>{
   const rows=[];
-  // Match: DD-MMM DD-MMM DESCRIPTION AMOUNT [CR]
-  // Amount uses Indonesian dots: 9.692.529 or 46.766
-  const singleRe=/^(\d{2}[-\/]([A-Z]{3}))\s+(\d{2}[-\/][A-Z]{3})\s+(.+?)\s+([\d.]+(?:,\d+)?)\s*(CR)?$/i;
-  const parseIDRAmount=(s)=>{
-    // Indonesian format: 9.692.529 (dots=thousands) or 46.766
-    // Remove all dots, treat as integer (no decimal in IDR CC statements)
-    return parseFloat(s.replace(/\./g,""))||0;
-  };
-  for(const line of text.split("\n")){
-    const m=line.trim().match(singleRe);if(!m)continue;
-    const date=resolveDate(m[1]);if(!date)continue;
-    const desc=m[4].trim();
-    if(/subtotal|total|saldo|tagihan baru|kredit limit|batas|tunggakan/i.test(desc))continue;
-    const amount=parseIDRAmount(m[5]);if(amount===0)continue;
-    const isCredit=!!(m[6]&&m[6].toUpperCase()==="CR");
+  const parseIDRAmount=(s)=>parseFloat(s.replace(/\./g,""))||0;
+  const isSkip=(s)=>/subtotal|saldo sebelumnya|tagihan baru|kredit limit|batas tarik|tunggakan|visa sq|suku bunga|informasi/i.test(s);
+  const dateRe=/^\d{2}-[A-Z]{3}$/i;
+  const amtRe=/^([\d.]+)\s*(CR)?$/i;
+
+  // PDF.js may extract each cell separately, so we work token by token
+  const tokens=text.split(/\s+/).filter(Boolean);
+  let i=0;
+  while(i<tokens.length){
+    // Look for a date token DD-MMM
+    if(!dateRe.test(tokens[i])){i++;continue;}
+    const date=resolveDate(tokens[i]);
+    if(!date){i++;continue;}
+    i++;
+    // Skip optional second date token
+    if(i<tokens.length&&dateRe.test(tokens[i]))i++;
+    // Collect description tokens until we hit an amount
+    const descTokens=[];
+    while(i<tokens.length&&!amtRe.test(tokens[i])&&!dateRe.test(tokens[i])){
+      descTokens.push(tokens[i]);i++;
+    }
+    const desc=descTokens.join(" ").trim();
+    if(!desc||isSkip(desc))continue;
+    // Now expect amount
+    if(i>=tokens.length)continue;
+    const amtMatch=tokens[i].match(/^([\d.]+)$/);
+    if(!amtMatch){continue;}
+    const amount=parseIDRAmount(amtMatch[1]);
+    i++;
+    // Check for CR marker
+    const isCredit=i<tokens.length&&tokens[i].toUpperCase()==="CR";
+    if(isCredit)i++;
+    if(amount===0)continue;
     rows.push({id:crypto.randomUUID(),date,description:desc,amount:isCredit?amount:-amount,type:isCredit?"in":"out",source,category:"Uncategorized"});
   }
   return rows;
