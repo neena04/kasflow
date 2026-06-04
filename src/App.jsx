@@ -493,10 +493,10 @@ export default function FinanceHub(){
     return true;
   });
   const filteredIds=filtered.map(t=>t.id);
+  const EXCLUDED_CATS=["Inter-account Transfer","Client Deposit","Client Disbursement"];
   // Revenue = only transactions in categories containing "Revenue"
   const totalIn=transactions.filter(t=>t.category.toLowerCase().includes("revenue")&&!EXCLUDED_CATS.includes(t.category)).reduce((s,t)=>s+Math.abs(t.amount),0);
-  // Expenditure excludes inter-account transfers (not real expenses)
-  const EXCLUDED_CATS=["Inter-account Transfer","Client Deposit","Client Disbursement"];
+  // Expenditure excludes pass-through categories (not real expenses)
   const totalOut=transactions.filter(t=>t.type==="out"&&!EXCLUDED_CATS.includes(t.category)).reduce((s,t)=>s+Math.abs(t.amount),0);
   // Net cash = all money in minus all money out INCLUDING transfers (real cash movement)
   const allIn=transactions.filter(t=>t.type==="in").reduce((s,t)=>s+Math.abs(t.amount),0);
