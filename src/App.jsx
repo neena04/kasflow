@@ -126,44 +126,38 @@ const parseBCACreditCardPDF=(text,source)=>{
   return rows;
 };
 // BNC (Bank Neo Commerce) e-statement parser
+// Key: Credit/Debit type + amount appear on same line; date is nearby with split year
 const parseBNCPDF=(text,source)=>{
   const rows=[];
-  // BNC dates are split: "01/05/202" newline "6 09:32" — rejoin first
-  const cleaned=text.replace(/(\d{2}\/\d{2}\/202)\s*\n\s*(\d)/g,"$1$2");
-  const lines=cleaned.split("\n").map(l=>l.trim()).filter(Boolean);
-  // Pattern: date, effective date, description, Credit/Debit, amount, balance
-  // We look for lines containing Credit or Debit as transaction type
-  const dateRe=/^\d{2}\/\d{2}\/\d{4}/;
-  const amtRe=/^[\d,]+\.\d{2}$/;
-  let i=0;
-  while(i<lines.length){
-    const line=lines[i];
-    // Find a date line
-    if(!dateRe.test(line)){i++;continue;}
-    const dateStr=line.substring(0,10); // DD/MM/YYYY
-    const parts=dateStr.split("/");
-    const date=`${parts[2]}-${parts[1]}-${parts[0]}`;
-    i++;
-    // Skip effective date line (same format)
-    if(i<lines.length&&dateRe.test(lines[i]))i++;
-    // Collect description lines until we hit Credit or Debit
-    const descLines=[];
-    while(i<lines.length&&!/^(Credit|Debit)$/i.test(lines[i])&&!dateRe.test(lines[i])){
-      descLines.push(lines[i]);i++;
+  const lines=text.split("\n");
+  const txLineRe=/(Credit|Debit)\s+([\d,]+\.\d{2})\s+[\d,]+\.\d{2}/i;
+  for(let i=0;i<lines.length;i++){
+    const m=lines[i].match(txLineRe);
+    if(!m)continue;
+    const isCredit=m[1].toLowerCase()==="credit";
+    const amount=parseFloat(m[2].replace(/,/g,""));
+    const beforeType=lines[i].substring(0,lines[i].search(/(Credit|Debit)/i)).trim();
+    let desc=(beforeType&&beforeType.length>3)?beforeType:"";
+    let date="";
+    for(let j=i-1;j>=Math.max(0,i-5);j--){
+      const l=lines[j];
+      const dm=l.match(/^(\d{2}\/\d{2}\/202)(\d?)/);
+      if(dm){
+        let yearDigit=dm[2];
+        if(!yearDigit){const ym=(lines[j+1]||"").match(/^(\d)/);if(ym)yearDigit=ym[1];}
+        const fullDate=dm[1]+(yearDigit||"6");
+        const parts=fullDate.split("/");
+        date=parts[2]+"-"+parts[1]+"-"+parts[0];
+        const afterDates=l.replace(/^\d{2}\/\d{2}\/202\d?\s+\d{2}\/\d{2}\/202\d?\s*/,"").trim();
+        if(afterDates&&afterDates.length>3&&!desc)desc=afterDates;
+        break;
+      }
+      const lt=l.trim();
+      if(lt&&lt.length>3&&!/^\d{2}\/\d{2}/.test(lt))desc=lt+" "+desc;
     }
-    const desc=descLines.join(" ").replace(/\. Reference \d+/g,"").replace(/Reference \d+/g,"").trim();
-    if(!desc||i>=lines.length)continue;
-    // Transaction type
-    const txType=lines[i].toLowerCase();i++;
-    if(txType!=="credit"&&txType!=="debit")continue;
-    // Amount
-    if(i>=lines.length||!amtRe.test(lines[i]))continue;
-    const amount=parseFloat(lines[i].replace(/,/g,""));i++;
-    // Skip balance line
-    if(i<lines.length&&amtRe.test(lines[i]))i++;
-    if(!amount||!desc)continue;
-    if(/^fee$/i.test(desc)||/total credit|total debit|ending balance|beginning balance/i.test(desc))continue;
-    const isCredit=txType==="credit";
+    desc=desc.replace(/\.?\s*Reference\s+\d+/g,"").replace(/\s+/g," ").trim();
+    if(!date||!desc||amount===0)continue;
+    if(/^fee$/i.test(desc)||/total credit|total debit|ending balance|beginning|period|product|currency|branch|date|description/i.test(desc))continue;
     rows.push({id:crypto.randomUUID(),date,description:desc,amount:isCredit?amount:-amount,type:isCredit?"in":"out",source,category:"Uncategorized"});
   }
   return rows;
