@@ -126,42 +126,30 @@ const parseBCACreditCardPDF=(text,source)=>{
   return rows;
 };
 // BNC (Bank Neo Commerce) e-statement parser
-// Key: Credit/Debit type + amount appear on same line; date is nearby with split year
+// PDF.js produces: "DD/MM/202 DD/MM/202 DESCRIPTION Credit/Debit AMOUNT BALANCE YEARDIGIT HH:MM"
 const parseBNCPDF=(text,source)=>{
   const rows=[];
-  const lines=text.split("\n");
-  const txLineRe=/(Credit|Debit)\s+([\d,]+\.\d{2})\s+[\d,]+\.\d{2}/i;
-  for(let i=0;i<lines.length;i++){
-    const m=lines[i].match(txLineRe);
-    if(!m)continue;
-    const isCredit=m[1].toLowerCase()==="credit";
-    const amount=parseFloat(m[2].replace(/,/g,""));
-    const beforeType=lines[i].substring(0,lines[i].search(/(Credit|Debit)/i)).trim();
-    let desc=(beforeType&&beforeType.length>3)?beforeType:"";
-    let date="";
-    for(let j=i-1;j>=Math.max(0,i-5);j--){
-      const l=lines[j];
-      const dm=l.match(/^(\d{2}\/\d{2}\/202)(\d?)/);
-      if(dm){
-        let yearDigit=dm[2];
-        if(!yearDigit){const ym=(lines[j+1]||"").match(/^(\d)/);if(ym)yearDigit=ym[1];}
-        const fullDate=dm[1]+(yearDigit||"6");
-        const parts=fullDate.split("/");
-        date=parts[2]+"-"+parts[1]+"-"+parts[0];
-        const afterDates=l.replace(/^\d{2}\/\d{2}\/202\d?\s+\d{2}\/\d{2}\/202\d?\s*/,"").trim();
-        if(afterDates&&afterDates.length>3&&!desc)desc=afterDates;
-        break;
-      }
-      const lt=l.trim();
-      if(lt&&lt.length>3&&!/^\d{2}\/\d{2}/.test(lt))desc=lt+" "+desc;
-    }
-    desc=desc.replace(/\.?\s*Reference\s+\d+/g,"").replace(/\s+/g," ").trim();
-    if(!date||!desc||amount===0)continue;
-    if(/^fee$/i.test(desc)||/total credit|total debit|ending balance|beginning|period|product|currency|branch|date|description/i.test(desc))continue;
+  const flat=text.replace(/\s+/g," ");
+  // Match full transaction pattern
+  const re=/(\d{2})\/(\d{2})\/202\s+\d{2}\/\d{2}\/202\s+(.+?)\s+(Credit|Debit)\s+([\d,]+\.\d{2})\s+[\d,]+\.\d{2}\s+(\d)\s+\d{2}:\d{2}/gi;
+  let m;
+  while((m=re.exec(flat))!==null){
+    const day=m[1],mon=m[2],yearDigit=m[6];
+    const date="202"+yearDigit+"-"+mon+"-"+day;
+    const isCredit=m[4].toLowerCase()==="credit";
+    const amount=parseFloat(m[5].replace(/,/g,""));
+    let desc=m[3]
+      .replace(/\.?\s*Reference\s*\d*/g,"")
+      .replace(/\d{14,}/g,"")
+      .replace(/\s+/g," ")
+      .trim();
+    if(!desc||desc.length<2)continue;
+    if(/^fee$/i.test(desc)||/total credit|total debit|ending balance|beginning|date.*type|description.*number|product name|currency|branch|period|e-statement/i.test(desc))continue;
     rows.push({id:crypto.randomUUID(),date,description:desc,amount:isCredit?amount:-amount,type:isCredit?"in":"out",source,category:"Uncategorized"});
   }
   return rows;
 };
+
 
 const parseGenericPDF=(text,source)=>{
   const rows=[];const lineRe=/(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{2}[-\/][A-Z]{3}[-\/]?\d{0,4})\s+(.{3,60}?)\s+([\d.,]{3,})\s*(CR|DB|K|D)?/i;
@@ -177,8 +165,6 @@ const parseGenericPDF=(text,source)=>{
 };
 const parsePDFBuffer=async(arrayBuffer,source)=>{
   const text=await extractPDFText(arrayBuffer);
-  console.log("PDF TEXT EXTRACTED (first 2000 chars):", text.substring(0,2000));
-  console.log("PDF LINES:", text.split("\n").slice(0,40).map((l,i)=>i+": "+JSON.stringify(l)));
   if(/REKENING KARTU KREDIT|KARTU KREDIT BCA/i.test(text))return parseBCACreditCardPDF(text,source);
   if(/Bank Neo Commerce|BNC|PT SEMANGAT SOLUSI|88880001/i.test(text))return parseBNCPDF(text,source);
   return parseGenericPDF(text,source);
