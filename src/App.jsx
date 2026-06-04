@@ -177,6 +177,8 @@ const parseGenericPDF=(text,source)=>{
 };
 const parsePDFBuffer=async(arrayBuffer,source)=>{
   const text=await extractPDFText(arrayBuffer);
+  console.log("PDF TEXT EXTRACTED (first 2000 chars):", text.substring(0,2000));
+  console.log("PDF LINES:", text.split("\n").slice(0,40).map((l,i)=>i+": "+JSON.stringify(l)));
   if(/REKENING KARTU KREDIT|KARTU KREDIT BCA/i.test(text))return parseBCACreditCardPDF(text,source);
   if(/Bank Neo Commerce|BNC|PT SEMANGAT SOLUSI|88880001/i.test(text))return parseBNCPDF(text,source);
   return parseGenericPDF(text,source);
